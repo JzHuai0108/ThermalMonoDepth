@@ -2,11 +2,14 @@ import torch
 from skimage.transform import resize as imresize
 from imageio import imread
 import numpy as np
-from path import Path
+# from path import Path
 import argparse
 from tqdm import tqdm
 import time
+import matplotlib.pyplot as plt
+from torchvision import transforms
 
+import os
 import sys
 sys.path.append('./common/')
 import models
@@ -24,16 +27,17 @@ parser.add_argument("--output-dir", default=None, required=True, type=str, help=
 parser.add_argument('--resnet-layers', required=True, type=int, default=18, choices=[18, 50], help='depth network architecture.')
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    
+
 def load_tensor_image(filename, args):
     img = np.expand_dims(imread(filename).astype(np.float32), axis=2)
     h,w,_ = img.shape
     if (h != args.img_height or w != args.img_width):
         img = imresize(img, (args.img_height, args.img_width)).astype(np.float32)
-    img = np.transpose(img, (2, 0, 1))
-    img = (torch.from_numpy(img).float() / 2**14)
-    tensor_img = ((img.unsqueeze(0)-0.45)/0.225).to(device)
-    return tensor_img
+    limit = 2**8
+    img1 = np.transpose(img, (2, 0, 1))
+    img1 = (torch.from_numpy(img1).float() / limit)
+    tensor_img1 = ((img1.unsqueeze(0)-0.45)/0.225).to(device)
+    return tensor_img1
 
 @torch.no_grad()
 def main():
@@ -47,19 +51,20 @@ def main():
     disp_net.load_state_dict(weights['state_dict'])
     disp_net.eval()
 
-    dataset_dir = Path(args.dataset_dir)
+    dataset_dir = args.dataset_dir
 
     # read file list
     if args.dataset_list is not None:
         with open(args.dataset_list, 'r') as f:
             test_files = list(f.read().splitlines())
     else:
-        test_files=sorted((dataset_dir+'Thermal').files('*.png'))
+        folder_path = os.path.join(dataset_dir, 'thermal')
+        test_files = sorted([os.path.join(folder_path, f) for f in os.listdir(folder_path) if f.endswith('.png')])
+        test_files = test_files[:30]
 
     print('{} files to test'.format(len(test_files)))
-  
-    output_dir = Path(args.output_dir)
-    output_dir.makedirs_p()
+    output_dir = args.output_dir
+    os.makedirs(output_dir, exist_ok=True)
 
     test_disp_avg = 0
     test_disp_std = 0
@@ -68,6 +73,7 @@ def main():
 
     avg_time = 0
     for j in tqdm(range(len(test_files))):
+        print('loading {}: {}'.format(j, test_files[j]))
         tgt_img = load_tensor_image(test_files[j], args)
 
         # compute speed
@@ -86,13 +92,15 @@ def main():
         if j == 0:
             predictions = np.zeros((len(test_files), *pred_disp.shape))
         predictions[j] = 1/pred_disp
-
+        fn, ext = os.path.splitext(os.path.basename(test_files[j]))
+        save_path = os.path.join(output_dir, f'{fn}_depth.png')
+        plt.imsave(save_path, predictions[j], cmap='viridis')
         test_disp_avg += pred_disp.mean()
         test_disp_std += pred_disp.std()
-        test_depth_avg += predictions.mean()
-        test_depth_std += predictions.std()
-        
-    np.save(output_dir/'predictions.npy', predictions)
+        test_depth_avg += predictions[j].mean()
+        test_depth_std += predictions[j].std()
+
+    np.save(output_dir + '/predictions.npy', predictions)
 
     avg_time /= len(test_files)
     print('Avg Time: ', avg_time, ' seconds.')
