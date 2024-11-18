@@ -1,6 +1,6 @@
 from __future__ import division
 import numpy as np
-from path import Path
+from path import Path # This works with path==14.0.1 but not 17.0.0. https://pypi.org/project/path/
 import cv2
 
 def transform_from_rot_trans(R, t):
