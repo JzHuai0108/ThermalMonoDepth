@@ -76,8 +76,8 @@ def main():
             pose = pose_net(squence_imgs[iter], squence_imgs[iter + 1])
             pose_mat = pose_vec2mat(pose).squeeze(0).cpu().numpy()
 
-            pose_mat = np.vstack([pose_mat, np.array([0, 0, 0, 1])])
-            global_pose = global_pose @  np.linalg.inv(pose_mat)
+            pose_mat = np.vstack([pose_mat, np.array([0, 0, 0, 1])]) # C(j+i)_T_C(j+i-1)
+            global_pose = global_pose @  np.linalg.inv(pose_mat) # C(j)_T_C(j+i)
             poses.append(global_pose[0:3, :])
 
         final_poses = np.stack(poses, axis=0)

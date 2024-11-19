@@ -1,8 +1,8 @@
 #!/bin/bash
 # run script : bash test_vivid_indoor.sh
 GPU_ID=0
-DATA_ROOT=/HDD/Dataset_processed/VIVID_256/
-RESULTS_DIR=results/
+DATA_ROOT=datasets/VIVID_256
+RESULTS_DIR=results
 
 RESNET=18
 IMG_H=256
@@ -39,7 +39,7 @@ for NAME in ${NAMES[@]}; do
 		--dataset $DATASET --pred_depth ${OUTPUT_DEPTH_DIR}/predictions.npy \
 		--gt_depth ${DATA_DIR}/${DEPTH_GT_DIR} --scene indoor >> ${OUTPUT_DEPTH_DIR}/eval_depth.txt 
 
-		rm ${OUTPUT_DEPTH_DIR}/predictions.npy
+#		rm ${OUTPUT_DEPTH_DIR}/predictions.npy
 	done
 
 	# pose
@@ -53,10 +53,12 @@ for NAME in ${NAMES[@]}; do
 		mkdir -p ${OUTPUT_POSE_DIR}
 
 		# Pose Evaulation 
-		CUDA_VISIBLE_DEVICES=${GPU_ID} python test_pose.py \
+		cmd="python test_pose.py \
 		--resnet-layers $RESNET --pretrained-posenet $POSE_NET \
 		--img-height $IMG_H --img-width $IMG_W \
 		--dataset-dir ${DATA_ROOT} --output-dir ${OUTPUT_POSE_DIR} \
-		--sequences ${SEQ} >> ${OUTPUT_POSE_DIR}/eval_pose.txt
+		--sequences ${SEQ}"
+		echo $cmd
+		CUDA_VISIBLE_DEVICES=${GPU_ID} $cmd >> ${OUTPUT_POSE_DIR}/eval_pose.txt
 	done
 done

@@ -20,7 +20,7 @@ class test_framework_VIVID(object):
                 compensated_poses = np.linalg.inv(first_pose[:,:3]) @ poses
 
                 yield {'imgs': imgs,
-                       'path': img_list[0],
+                       'path': img_list[snippet_indices[0]],
                        'poses': compensated_poses
                        }
 
@@ -28,7 +28,7 @@ class test_framework_VIVID(object):
         return self.generator()
 
     def __len__(self):
-        return sum(len(imgs) for imgs in self.img_files)
+        return sum(len(samples) for samples in self.sample_indices)
 
 
 def read_scene_data(data_root, sequence_set, seq_length=3, step=1):

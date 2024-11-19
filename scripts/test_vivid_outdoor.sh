@@ -2,8 +2,8 @@
 # run script : bash test_vivid_outdoor.sh
 
 GPU_ID=0
-DATA_ROOT=/HDD/Dataset_processed/VIVID_256/
-RESULTS_DIR=results/
+DATA_ROOT=datasets/VIVID_256/
+RESULTS_DIR=results
 
 RESNET=18
 IMG_H=256
@@ -43,7 +43,7 @@ for NAME in ${NAMES[@]}; do
 		--dataset $DATASET --pred_depth ${OUTPUT_DEPTH_DIR}/predictions.npy \
 		--gt_depth ${DATA_DIR}/${DEPTH_GT_DIR}  --scene outdoor >> ${OUTPUT_DEPTH_DIR}/eval_depth.txt 
 
-		rm ${OUTPUT_DEPTH_DIR}/predictions.npy
+#		rm ${OUTPUT_DEPTH_DIR}/predictions.npy
 
 
 		# Pose Evaulation 
