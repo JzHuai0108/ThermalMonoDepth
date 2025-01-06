@@ -2,12 +2,37 @@ from __future__ import division
 import numpy as np
 from path import Path # This works with path==14.0.1 but not 17.0.0. https://pypi.org/project/path/
 import cv2
+from datetime import datetime
+
 
 def transform_from_rot_trans(R, t):
     """Transforation matrix from rotation matrix and translation vector."""
     R = R.reshape(3, 3)
     t = t.reshape(3, 1)
     return np.vstack((np.hstack([R, t]), [0, 0, 0, 1]))
+
+
+def load_local_times(timefile):
+    """
+    Loads local times from a file and converts them to Unix time in seconds.
+    
+    Args:
+        timefile (str): Path to the file containing timestamps.
+                        Each line should be formatted as: 
+                        "YYYY-MM-DD HH:MM:SS.ssssss"
+    
+    Returns:
+        list of float: A list of timestamps in Unix time (seconds).
+    """
+    times = []
+    with open(timefile, 'r') as f:
+        for line in f:
+            timestamp = datetime.strptime(line.strip(), "%Y-%m-%d %H:%M:%S.%f")
+            unix_time = timestamp.timestamp()
+            times.append(unix_time)
+
+    return times
+
 
 class VIVIDRawLoader(object):
     def __init__(self,
@@ -43,7 +68,8 @@ class VIVIDRawLoader(object):
 
     # collect subset from target 
     def collect_scenes(self, drive):
-        scene_data = {'dir': drive, 'speed': [], 'frame_id': [], 'pose_T':[], 'pose_RGB':[], 'rel_path': drive.name}
+        scene_data = {'dir': drive, 'speed': [], 'frame_id': [], 'pose_T':[], 'pose_RGB':[],
+                      'time_T':[], 'time_RGB':[], 'rel_path': drive.name}
         ther2rgb = self.read_raw_calib_file(drive.parent/'calibration'/'calib_ther_to_rgb.yaml')
 #            event2rgb = self.read_raw_calib_file(drive.parent/'calibration'/'calib_event_to_rgb.yaml')
 #            lidar2rgb = self.read_raw_calib_file(drive.parent/'calibration'/'calib_lidar_to_rgb.yaml')
@@ -61,11 +87,16 @@ class VIVIDRawLoader(object):
         # read avg speed in target coor
         TgtAvgVelo_T = np.genfromtxt(drive/'avg_velocity_thermal.txt') # len x 1
 
+        times_T = load_local_times(drive/'Thermal'/'timestamps.txt')
+        times_RGB = load_local_times(drive/'RGB'/'timestamps.txt')
+
         for n in range(len(TgtAvgVelo_T)):
             scene_data['pose_T'].append(TgtPoseMat_T[n])
             scene_data['pose_RGB'].append(TgtPoseMat_RGB[n])
             scene_data['frame_id'].append('{:06d}'.format(n+1)) # files are start from 1, but python indexing start from 0
             scene_data['speed'].append(TgtAvgVelo_T[n])
+            scene_data['time_T'].append(times_T[n])
+            scene_data['time_RGB'].append(times_RGB[n])
 
         sample_T = self.load_image(scene_data, 1, 'T')
         if sample_T is None:
@@ -97,6 +128,8 @@ class VIVIDRawLoader(object):
             if self.get_pose:
                 sample['pose_T'] = scene_data['pose_T'][i]
                 sample['pose_RGB'] = scene_data['pose_RGB'][i]
+                sample['time_T'] = scene_data['time_T'][i]
+                sample['time_RGB'] = scene_data['time_RGB'][i]
 
             return sample
 

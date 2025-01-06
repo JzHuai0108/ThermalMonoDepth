@@ -6,6 +6,7 @@ import sys
 from tqdm import tqdm
 from path import Path
 import cv2
+import os
 import shutil
 
 parser = argparse.ArgumentParser()
@@ -49,10 +50,16 @@ def dump_example(args, scene):
 
     extrinsics_T2RGB = scene_data['Tr_T2RGB']
     dump_cam_file = dump_dir/'Tr_T2RGB.txt'
-    np.savetxt(dump_cam_file, extrinsics_T2RGB) 
+    np.savetxt(dump_cam_file, extrinsics_T2RGB)
 
     poses_T_file = dump_dir/'poses_T.txt'
     poses_RGB_file = dump_dir/'poses_RGB.txt'
+    times_T_file = dump_dir/'Thermal.txt'
+    times_RGB_file = dump_dir/'RGB.txt'
+    relpath_T = []
+    relpath_RGB = []
+    times_T = []
+    times_RGB = []
 
     poses_T = []
     poses_RGB = []
@@ -62,6 +69,12 @@ def dump_example(args, scene):
         frame_nb = sample["id"]
         cv2.imwrite(dump_dir_rgb/'{}.png'.format(frame_nb), sample['Img_RGB'])
         cv2.imwrite(dump_dir_ther/'{}.png'.format(frame_nb), sample['Img_Ther'])
+        relative_path = os.path.relpath(dump_dir_rgb / f"{frame_nb}.png", dump_dir)
+        relpath_RGB.append(relative_path)
+        relative_path = os.path.relpath(dump_dir_ther / f"{frame_nb}.png", dump_dir)
+        relpath_T.append(relative_path)
+        times_T.append(sample["time_T"])
+        times_RGB.append(sample["time_RGB"])
 
         if "pose_T" in sample.keys():
             poses_T.append(sample["pose_T"].tolist())
@@ -75,9 +88,16 @@ def dump_example(args, scene):
     if len(poses_T) != 0:
         np.savetxt(poses_T_file, np.array(poses_T).reshape(-1, 12), fmt='%.6e')
         np.savetxt(poses_RGB_file, np.array(poses_RGB).reshape(-1, 12), fmt='%.6e')
+        with open(times_T_file, 'w') as s:
+            for ti, time in enumerate(times_T):
+                s.write('{:.09f} {}\n'.format(time, relpath_T[ti]))
+        with open(times_RGB_file, 'w') as s:
+            for ti, time in enumerate(times_RGB):
+                s.write('{:.09f} {}\n'.format(time, relpath_RGB[ti]))
 
     if len(dump_dir_rgb.files('*.png')) < 3:
         dump_dir.rmtree()
+
 
 def extract_well_lit_images(args):
     tgt_dir   = args.dump_root/'indoor_robust_varying'

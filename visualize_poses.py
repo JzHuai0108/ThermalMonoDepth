@@ -3,43 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D # for 3D viz
 import argparse
-
-
-def cat_poses(poses):
-    """
-
-    Args:
-        poses: [N, 5, 3, 4]. 5 is subsequence length, N is number of subsequences, 3x4 is [R, t] of C(j)_T_C(j+i).
-    Returns:
-        traj: [N+4, 4, 4] W_T_Ci poses
-    """
-    N, subseq = poses.shape[:2]
-    imgs = N + subseq - 1
-    traj = []
-
-    # Initialize the trajectory with the identity matrix for C(0)_T_C(0)
-    traj.append(np.eye(4))
-
-    # Build the trajectory
-    for j in range(poses.shape[0]):
-        if j == N - 1:
-            # Handle the last subsequence with the full subsequence length
-            C0_T_Cj = traj[-1]
-            for i in range(1, subseq):  # Iterate from 1 to (subseq - 1)
-                Cj_T_Cjpi = poses[j, i, :, :]  # Get the pose matrix
-                # Append the last row [0, 0, 0, 1] to make it 4x4
-                Cj_T_Cjpi = np.vstack((Cj_T_Cjpi, np.array([0, 0, 0, 1])))
-                traj.append(C0_T_Cj @ Cj_T_Cjpi)
-        else:
-            # Handle the intermediate subsequences
-            Cj_T_Cjp1 = poses[j, 1, :, :]  # Get the pose matrix for the first step in the subsequence
-            # Append the last row [0, 0, 0, 1] to make it 4x4
-            Cj_T_Cjp1 = np.vstack((Cj_T_Cjp1, np.array([0, 0, 0, 1])))
-            traj.append(traj[-1] @ Cj_T_Cjp1)
-
-    # Assert that the trajectory length matches the number of images
-    assert len(traj) == imgs
-    return traj
+from common.utils.convert_poses import cat_poses
 
 
 if __name__ == "__main__":
@@ -70,7 +34,7 @@ if __name__ == "__main__":
     # Extract positions from the trajectory matrices
     positions = []
     for pose in traj:
-        positions.append(pose[:3, 3])  # Get the translation vector (x, y, z) from each 4x4 pose matrix
+        positions.append(pose[:3])  # Get the translation vector (x, y, z) from each 4x4 pose matrix
 
     positions = np.array(positions) # Convert to a NumPy array for further use
 

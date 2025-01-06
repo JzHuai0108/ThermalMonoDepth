@@ -4,6 +4,7 @@ from imageio import imread
 import numpy as np
 from path import Path
 import argparse
+import cv2
 from tqdm import tqdm
 import time
 
@@ -18,20 +19,28 @@ parser.add_argument("--img-height", default=256, type=int, help="Image height") 
 parser.add_argument("--img-width", default=320, type=int, help="Image width")   # 832 (kitti)
 parser.add_argument("--min-depth", default=1e-3)
 parser.add_argument("--max-depth", default=80)
+parser.add_argument("--max-value", default=2**14, type=float, help="max pixel value in the thermal images")
 parser.add_argument("--dataset-dir", default='.', type=str, help="Dataset directory")
+parser.add_argument("--modality", default='Thermal', type=str, help="sensor modality, thermal or RGB")
 parser.add_argument("--dataset-list", default=None, type=str, help="Dataset list file")
 parser.add_argument("--output-dir", default=None, required=True, type=str, help="Output directory for saving predictions in a big 3D numpy file")
 parser.add_argument('--resnet-layers', required=True, type=int, default=18, choices=[18, 50], help='depth network architecture.')
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    
+
 def load_tensor_image(filename, args):
-    img = np.expand_dims(imread(filename).astype(np.float32), axis=2)
+    orig_img = imread(filename).astype(np.float32)
+    if len(orig_img.shape) < 3:
+        img = np.expand_dims(orig_img, axis=2)
+    else:
+        img = cv2.cvtColor(orig_img, cv2.COLOR_BGR2GRAY)
+        img = np.expand_dims(img, axis=2)
+
     h,w,_ = img.shape
     if (h != args.img_height or w != args.img_width):
         img = imresize(img, (args.img_height, args.img_width)).astype(np.float32)
     img = np.transpose(img, (2, 0, 1))
-    img = (torch.from_numpy(img).float() / 2**14)
+    img = (torch.from_numpy(img).float() / args.max_value)
     tensor_img = ((img.unsqueeze(0)-0.45)/0.225).to(device)
     return tensor_img
 
@@ -54,7 +63,8 @@ def main():
         with open(args.dataset_list, 'r') as f:
             test_files = list(f.read().splitlines())
     else:
-        test_files=sorted((dataset_dir+'Thermal').files('*.png'))
+        print(f'Sensor modality {args.modality}')
+        test_files=sorted((dataset_dir+args.modality).files('*.png'))
 
     print('{} files to test'.format(len(test_files)))
   

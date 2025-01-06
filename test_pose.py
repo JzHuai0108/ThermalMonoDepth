@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 import sys
 sys.path.append('./common/')
+from utils.convert_poses import cat_poses, save_tum_poses, Pq_from_T_list
 import models
 from loss.inverse_warp import pose_vec2mat
 
@@ -17,8 +18,9 @@ parser.add_argument("--pretrained-posenet", required=True, type=str, help="pretr
 parser.add_argument("--img-height", default=256, type=int, help="Image height") 
 parser.add_argument("--img-width", default=320, type=int, help="Image width") 
 parser.add_argument("--no-resize", action='store_true', help="no resizing is done")
-
+parser.add_argument("--max-value", default=2**14, type=float, help="max pixel value in the thermal images")
 parser.add_argument("--dataset-dir", type=str, help="Dataset directory")
+parser.add_argument("--modality", default='Thermal', type=str, help="sensor modality, thermal or RGB")
 parser.add_argument('--sequence-length', type=int, metavar='N', help='sequence length for testing', default=5)
 parser.add_argument("--sequences", default=['indoor_aggresive_dark'], type=str, nargs='*', help="sequences to test")
 parser.add_argument("--output-dir", default=None, type=str, help="Output directory for saving predictions in a big 3D numpy file")
@@ -31,7 +33,7 @@ def load_tensor_image(img, args):
     if (h != args.img_height or w != args.img_width):
         img = imresize(img, (args.img_height, args.img_width)).astype(np.float32)
     img = np.transpose(img, (2, 0, 1))
-    img = (torch.from_numpy(img).float() / 2**14)
+    img = (torch.from_numpy(img).float() / args.max_value)
     tensor_img = ((img.unsqueeze(0)-0.45)/0.225).to(device)
     return tensor_img
 
@@ -52,7 +54,8 @@ def main():
     # load data loader
     from eval_vivid.pose_evaluation_utils import test_framework_VIVID as test_framework
     dataset_dir = Path(args.dataset_dir)
-    framework = test_framework(dataset_dir, args.sequences, seq_length=seq_length, step=1)
+    print(f'Sensor modality {args.modality}')
+    framework = test_framework(dataset_dir, args.sequences, seq_length=seq_length, step=1, modality=args.modality)
 
     print('{} snippets to test'.format(len(framework)))
     errors = np.zeros((len(framework), 2), np.float32)
@@ -99,6 +102,17 @@ def main():
 
     if args.output_dir is not None:
         np.save(output_dir/'predictions.npy', predictions_array)
+        if len(args.sequences) < 2:
+            print(f'Saving stamped_traj_estimate0.txt under {output_dir}')
+            traj = cat_poses(predictions_array)
+            img_times = framework.times[0]
+            save_tum_poses(img_times, traj, output_dir/'stamped_traj_estimate0.txt')
+            poses = framework.poses[0]
+            gt_traj = Pq_from_T_list(poses)
+            assert len(gt_traj) == len(traj), f"Inconsistent traj poses {len(traj)} and gt poses {len(gt_traj)}"
+            print(f'Saving stamped_groundtruth.txt under {output_dir}')
+            save_tum_poses(img_times, gt_traj, output_dir/'stamped_groundtruth.txt')
+
 
 def compute_pose_error(gt, pred):
     RE = 0
