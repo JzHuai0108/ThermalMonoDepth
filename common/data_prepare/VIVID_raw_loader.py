@@ -3,7 +3,7 @@ import numpy as np
 from path import Path # This works with path==14.0.1 but not 17.0.0. https://pypi.org/project/path/
 import cv2
 from datetime import datetime
-
+import pytz
 
 def transform_from_rot_trans(R, t):
     """Transforation matrix from rotation matrix and translation vector."""
@@ -12,7 +12,7 @@ def transform_from_rot_trans(R, t):
     return np.vstack((np.hstack([R, t]), [0, 0, 0, 1]))
 
 
-def load_local_times(timefile):
+def load_local_times(timefile, zone='Asia/Seoul'):
     """
     Loads local times from a file and converts them to Unix time in seconds.
     
@@ -28,7 +28,9 @@ def load_local_times(timefile):
     with open(timefile, 'r') as f:
         for line in f:
             timestamp = datetime.strptime(line.strip(), "%Y-%m-%d %H:%M:%S.%f")
-            unix_time = timestamp.timestamp()
+            tz = pytz.timezone(zone)
+            localized_time = tz.localize(timestamp)
+            unix_time = localized_time.timestamp()
             times.append(unix_time)
 
     return times

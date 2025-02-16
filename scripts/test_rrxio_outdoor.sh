@@ -8,8 +8,8 @@ RESULTS_DIR=results
 RESNET=18
 IMG_H=256
 IMG_W=320
-IMG_H=512
-IMG_W=640
+# IMG_H=512
+# IMG_W=640
 DATASET=RRXIO
 INPUT_TYPE=T 
 DEPTH_GT_DIR=Depth_T 
@@ -27,12 +27,11 @@ for NAME in ${NAMES[@]}; do
 
 	for SEQ in ${SEQS[@]}; do
 		echo "Seq_name : ${SEQ}"
-		SCENE=outdoor
 
 		#mkdir -p ${RESULTS_DIR}
 		DATA_DIR=${DATA_ROOT}/${SEQ}/
 		OUTPUT_DEPTH_DIR=${RESULTS_DIR}/${DATASET}/$modality/Depth/${SEQ}/
-		OUTPUT_POSE_DIR=${RESULTS_DIR}/${DATASET}/$modality/POSE/${SEQ}/
+		OUTPUT_POSE_DIR=${RESULTS_DIR}/${DATASET}/$modality/${SEQ}/
 		mkdir -p ${OUTPUT_DEPTH_DIR}
 		mkdir -p ${OUTPUT_POSE_DIR}
 

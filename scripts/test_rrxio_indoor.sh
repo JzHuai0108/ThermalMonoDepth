@@ -5,10 +5,10 @@ DATA_ROOT=datasets/irs_rtvi_datasets_2021
 RESULTS_DIR=results
 
 RESNET=18
-# IMG_H=256
-# IMG_W=320
-IMG_H=512
-IMG_W=640
+IMG_H=256
+IMG_W=320
+# IMG_H=512
+# IMG_W=640
 DATASET=RRXIO
 DEPTH_GT_DIR=Depth_T 
 POSE_GT=poses_T.txt 
@@ -31,7 +31,7 @@ for NAME in ${NAMES[@]}; do
 		#mkdir -p ${RESULTS_DIR}
 		DATA_DIR=${DATA_ROOT}/${SEQ}/
 		OUTPUT_DEPTH_DIR=${RESULTS_DIR}/${DATASET}/$modality/Depth/${SEQ}/
-		OUTPUT_POSE_DIR=${RESULTS_DIR}/${DATASET}/$modality/POSE/${SEQ}/
+		OUTPUT_POSE_DIR=${RESULTS_DIR}/${DATASET}/$modality/${SEQ}/
 		mkdir -p ${OUTPUT_DEPTH_DIR}
 		mkdir -p ${OUTPUT_POSE_DIR}
 

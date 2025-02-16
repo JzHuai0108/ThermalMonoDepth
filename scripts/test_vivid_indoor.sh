@@ -1,6 +1,6 @@
 #!/bin/bash
 # run script : bash test_vivid_indoor.sh
-GPU_ID=0
+GPU_ID=1
 DATA_ROOT=datasets/VIVID_256
 RESULTS_DIR=results
 
@@ -32,7 +32,7 @@ for NAME in ${NAMES[@]}; do
 		OUTPUT_DEPTH_DIR=${RESULTS_DIR}/${DATASET}/$modality/Depth/${SEQ}/
 		mkdir -p ${OUTPUT_DEPTH_DIR}
 
-		OUTPUT_POSE_DIR=${RESULTS_DIR}/${DATASET}/$modality/POSE/${SEQ}/
+		OUTPUT_POSE_DIR=${RESULTS_DIR}/${DATASET}/$modality/${SEQ}/
 		mkdir -p ${OUTPUT_POSE_DIR}
 
 		# Detph Evaulation 
